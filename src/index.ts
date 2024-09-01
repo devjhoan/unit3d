@@ -183,7 +183,7 @@ class TorrentManager {
 				choices: [
 					{ title: "Nombre", value: "name" },
 					{ title: "Descripción", value: "description" },
-					{ title: "", value: "uploader" },
+					{ title: "Uploader", value: "uploader" },
 					{ title: "TheMovieDB ID", value: "tmdbId" },
 					{ title: "IMDb ID", value: "imdbId" },
 					{ title: "TheTVDB ID", value: "tvdbId" },
