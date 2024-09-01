@@ -49,3 +49,10 @@ bun run src/index.ts
 # 📚 Configuración
 
 La configuración se encuentra en el archivo `config.yml`, puedes modificar los valores según tus necesidades.
+
+# 📸 Imagenes
+
+![Select Query](./images/select-query.png)
+![Select Category](./images/select-category.png)
+![Select Torrents](./images/select-torrent.png)
+![Select Client](./images/select-client.png)
