@@ -181,15 +181,15 @@ class TorrentManager {
 				name: "query-type",
 				message: "Selecciona el tipo de consulta",
 				choices: [
-					{ title: "Name", value: "name" },
-					{ title: "Description", value: "description" },
-					{ title: "Uploader", value: "uploader" },
+					{ title: "Nombre", value: "name" },
+					{ title: "Descripción", value: "description" },
+					{ title: "", value: "uploader" },
 					{ title: "TheMovieDB ID", value: "tmdbId" },
 					{ title: "IMDb ID", value: "imdbId" },
 					{ title: "TheTVDB ID", value: "tvdbId" },
-					{ title: "Season Number", value: "seasonNumber" },
-					{ title: "Episode Number", value: "episodeNumber" },
-					{ title: "Resolution", value: "resolutions" },
+					{ title: "Número de Temporada", value: "seasonNumber" },
+					{ title: "Número de Episodio", value: "episodeNumber" },
+					{ title: "Resolución", value: "resolutions" },
 				],
 			},
 		]);
@@ -270,8 +270,8 @@ class TorrentManager {
 				choices.push({
 					title: this.color(
 						serie
-							? `• ${serie.name} (${year}) ${embySerie ? "(Already Exists)" : ""}`
-							: `• ${embySerie?.Name || serieId} ${embySerie ? "(Already Exists)" : ""}`,
+							? `• ${serie.name} (${year}) ${embySerie ? "(Ya existe)" : ""}`
+							: `• ${embySerie?.Name || serieId} ${embySerie ? "(Ya existe)" : ""}`,
 						"magenta",
 					),
 					value: `skip-${serieId}`,
@@ -299,7 +299,7 @@ class TorrentManager {
 
 					choices.push({
 						title: this.color(
-							` » Season ${season} ${alreadyExists && "(Already Exists)"}`,
+							` » Season ${season} ${alreadyExists && "(Ya existe)"}`,
 							alreadyExists ? "green" : "blue",
 						),
 						value: `season-${season}`,
@@ -335,8 +335,8 @@ class TorrentManager {
 				choices.push({
 					title: this.color(
 						movie
-							? `• ${movie.title} (${movie.release_date.split("-")[0]}) ${embyMovie ? "(Already Exists)" : ""}`
-							: `• ${embyMovie?.Name || movieId} ${embyMovie ? "(Already Exists)" : ""}`,
+							? `• ${movie.title} (${movie.release_date.split("-")[0]}) ${embyMovie ? "(Ya existe)" : ""}`
+							: `• ${embyMovie?.Name || movieId} ${embyMovie ? "(Ya existe)" : ""}`,
 						embyMovie ? "green" : "magenta",
 					),
 					value: `skip-${movieId}`,
@@ -398,7 +398,7 @@ class TorrentManager {
 			const client = this.torrentClients[torrentClient];
 
 			if (!torrentData) {
-				console.error(`[-] Torrent not found: ${torrent}`);
+				console.error(`[-] Torrent no encontrado: ${torrent}`);
 				continue;
 			}
 
@@ -413,7 +413,7 @@ class TorrentManager {
 				await this.downloadSeries(torrentData, client);
 			} else {
 				console.error(
-					`[-] Category not supported: ${torrentData.attributes.category}`,
+					`[-] Categoría no soportada: ${torrentData.attributes.category}`,
 				);
 			}
 		}
@@ -439,7 +439,7 @@ class TorrentManager {
 		const serie = await this.tmdb.getSerieById(torrentData.attributes.tmdb_id);
 		if (!serie) {
 			return console.error(
-				`[-] (${torrentData.attributes.tmdb_id}) Serie not found: ${torrentData.attributes.name}`,
+				`[-] (${torrentData.attributes.tmdb_id}) Serie no encontrada: ${torrentData.attributes.name}`,
 			);
 		}
 
