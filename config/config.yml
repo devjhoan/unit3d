@@ -22,7 +22,7 @@ TmdbSettings:
 # Emby es usado para saber si una serie o película ya está descargada en tu librería
 EmbySettings:
   # Activa o desactiva el uso de Emby
-  Enabled: true
+  Enabled: false
   # Url donde se encuentra tu servidor Emby
   ApiUrl: "http://emby.server.local"
   # Tu api key de Emby (http://emby.local/web/index.html#!/apikeys)
@@ -32,15 +32,7 @@ EmbySettings:
 
 TorrentClients:
   # Configuración de cada cliente de torrent
-  - Url: "http://pterodactyl.server.local"
-    DisplayName: "Pterodactyl"
-    Username: "admin"
-    Password: "Jhoan2020.*"
-  - Url: "http://strider.server.local"
-    DisplayName: "Strider"
-    Username: "admin"
-    Password: "Jhoan2020.*"
-  - Url: "http://192.168.1.20:8083"
+  - Url: "http://192.168.1.20:8080"
     DisplayName: "Home"
     Username: "admin"
-    Password: "Jhoan2020.*"
+    Password: "Contraseña1234"
