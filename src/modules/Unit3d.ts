@@ -1,3 +1,4 @@
+import { config } from "@/lib/config";
 import type {
 	Unit3dSearchResult,
 	ContentItem,
@@ -31,7 +32,14 @@ export class Unit3d {
 		});
 
 		const torrents = response?.data;
-		return torrents.filter((torrent) => torrent.attributes.seeders > 0);
+		return torrents
+			.filter((torrent) => torrent.attributes.seeders > 0)
+			.filter((torrent) =>
+				config.GeneralSettings.FilterTags.some(
+					(tag) =>
+						!torrent.attributes.name.toLowerCase().includes(tag.toLowerCase()),
+				),
+			);
 	}
 
 	private async get<T>({

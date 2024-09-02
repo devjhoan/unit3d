@@ -3,6 +3,8 @@ GeneralSettings:
   ApiUrl: "https://tracker.com"
   # Tu user api key (https://tracker.com/users/YOUR_USERNAME/apikeys)
   ApiKey: "Tu-Api-Key-Aqui"
+  # Los Tags que definas en el filtro serán ignorados en la búsqueda
+  FilterTags: ["SUBS"]
 
 FolderSettings:
   # Directorio donde se descargarán las películas
