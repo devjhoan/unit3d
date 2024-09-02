@@ -9,21 +9,21 @@ export interface ContentItem {
 }
 
 export enum TrackerCategory {
-	MOVIES = 1,
-	TV = 2,
-	ANIME = 5,
-	DORAMAS = 20,
-	TELENOVELAS = 8,
-	EBOOKS = 18,
+	Peliculas = 1,
+	Series = 2,
+	Anime = 5,
+	Doramas = 20,
+	Telenovelas = 8,
+	Ebooks = 18,
 }
 
 export enum StringCategory {
-	MOVIES = "Peliculas",
-	TV = "TV Series",
-	ANIME = "Anime",
-	DORAMAS = "Doramas & Turcas",
-	TELENOVELAS = "Telenovelas",
-	EBOOKS = "Ebooks",
+	Peliculas = "Peliculas",
+	Series = "TV Series",
+	Anime = "Anime",
+	Doramas = "Doramas & Turcas",
+	Telenovelas = "Telenovelas",
+	Ebooks = "Ebooks",
 }
 
 export interface QueryParams {
