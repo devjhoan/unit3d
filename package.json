@@ -19,8 +19,8 @@
 		"typescript": "^5.0.0"
 	},
 	"dependencies": {
+		"@inquirer/prompts": "^5.3.8",
 		"@robertklep/qbittorrent": "^1.0.1",
-		"js-yaml": "^4.1.0",
-		"prompts": "^2.4.2"
+		"js-yaml": "^4.1.0"
 	}
 }
