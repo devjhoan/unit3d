@@ -1,6 +1,7 @@
 interface GeneralSettings {
 	ApiUrl: string;
 	ApiKey: string;
+	FilterTags: Array<string>;
 }
 
 interface FolderSettings {
