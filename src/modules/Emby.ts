@@ -10,6 +10,7 @@ interface EmbyOptions {
 const movieCache = new Map<number, ServerItem>();
 const serieCache = new Map<number, ServerItem>();
 const episodeCache = new Map<string, Array<Episode>>();
+const serverItemsCache = new Map<string, Array<ServerItem>>();
 
 export class Emby {
 	private apiUrl: string;
@@ -49,7 +50,7 @@ export class Emby {
 		if (!this.enabled) return undefined;
 		if (movieCache.has(tmdbId)) return movieCache.get(tmdbId);
 
-		const items = await this.getServerItems(["Movie"]);
+		const items = await this.getServerItems("Movie");
 		const item = items.find(
 			(item) => item.ProviderIds.Tmdb === tmdbId.toString(),
 		);
@@ -63,7 +64,7 @@ export class Emby {
 		if (!this.enabled) return null;
 		if (serieCache.has(tmdbId)) return serieCache.get(tmdbId) || null;
 
-		const items = await this.getServerItems(["Series"]);
+		const items = await this.getServerItems("Series");
 		const item = items.find(
 			(item) => item.ProviderIds.Tmdb === tmdbId.toString(),
 		);
@@ -92,20 +93,19 @@ export class Emby {
 		return json?.Items || [];
 	}
 
-	async getServerItems(
-		filter: Array<"Movie" | "Series">,
-	): Promise<Array<ServerItem>> {
+	async getServerItems(filter: "Movie" | "Series"): Promise<Array<ServerItem>> {
 		if (!this.enabled) return [];
-		const userId = await this.getEmbyUserId();
+		if (serverItemsCache.has(filter)) return serverItemsCache.get(filter) || [];
 
+		const userId = await this.getEmbyUserId();
 		const queryParams = new URLSearchParams({
 			SortBy: "SortName",
 			SortOrder: "Ascending",
-			IncludeItemTypes: filter.join(","),
+			IncludeItemTypes: filter,
 			Recursive: "true",
 			StartIndex: "0",
 			collapseBoxSetItems: "false",
-			Fields: "ProviderIds",
+			Fields: "ProviderIds,Path",
 		});
 
 		const res = await fetch(
@@ -121,6 +121,7 @@ export class Emby {
 		const json = (await res.json()) as ServerItemResponse;
 		this.apiCalls++;
 
+		if (json?.Items) serverItemsCache.set(filter, json.Items);
 		return json?.Items || [];
 	}
 
