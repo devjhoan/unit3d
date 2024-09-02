@@ -47,7 +47,6 @@ export class Unit3d {
 		params,
 	}: { url: string; params?: Record<string, unknown> }): Promise<T> {
 		const queryString = buildQueryString(params || {}, this.apiKey);
-		console.log(`${this.apiUrl}/api/${url}?${queryString}`);
 		const response = await fetch(`${this.apiUrl}/api/${url}?${queryString}`, {
 			headers: {
 				"Content-Type": "application/json",
