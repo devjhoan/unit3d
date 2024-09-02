@@ -220,6 +220,10 @@ class TorrentManager {
 					value: "description",
 				},
 				{
+					name: "Freeleech %",
+					value: "free",
+				},
+				{
 					name: "Uploader",
 					value: "uploader",
 				},
@@ -282,6 +286,24 @@ class TorrentManager {
 			});
 
 			return { types: [types] };
+		}
+
+		if (response === "free") {
+			const free = await select({
+				message: "Ingresa el porcentaje de freeleech (0-100)",
+				default: "100",
+				pageSize: 15,
+				loop: false,
+				choices: [
+					{ name: "100%", value: "100" },
+					{ name: "75%", value: "75" },
+					{ name: "50%", value: "50" },
+					{ name: "25%", value: "25" },
+					{ name: "0%", value: "0" },
+				],
+			});
+
+			return { free: free };
 		}
 
 		if (response === "year") {
@@ -433,16 +455,16 @@ class TorrentManager {
 				const movie = await this.tmdb.getMovieById(movieId);
 				const embyMovie = await this.emby.getMovieByTmdbId(movieId);
 
-				choices.push({
-					name: this.color(
-						movie
-							? `• ${movie.title} (${movie.release_date.split("-")[0]}) ${embyMovie ? "(Ya existe)" : ""}`
-							: `• ${embyMovie?.Name || movieId} ${embyMovie ? "(Ya existe)" : ""}`,
-						embyMovie ? "green" : "magenta",
+				choices.push(
+					new Separator(
+						this.color(
+							movie
+								? `• ${movie.title} (${movie.release_date.split("-")[0]}) ${embyMovie ? "(Ya existe)" : ""}`
+								: `• ${embyMovie?.Name || movieId} ${embyMovie ? "(Ya existe)" : ""}`,
+							embyMovie ? "green" : "magenta",
+						),
 					),
-					value: `skip-${movieId}`,
-					disabled: true,
-				});
+				);
 
 				const torrents = filteredTorrents
 					.filter((torrent) => torrent.attributes.tmdb_id === movieId)
