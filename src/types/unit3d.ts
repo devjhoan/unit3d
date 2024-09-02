@@ -26,6 +26,15 @@ export enum StringCategory {
 	Ebooks = "Ebooks",
 }
 
+export enum TrackerTypes {
+	FullDisc = 1,
+	Remux = 2,
+	Encode = 3,
+	WebDl = 4,
+	WebRip = 5,
+	HDTV = 6,
+}
+
 export interface QueryParams {
 	// torrent name
 	name?: string;

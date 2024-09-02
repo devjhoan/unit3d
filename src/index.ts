@@ -9,6 +9,7 @@ import { Tmdb } from "@/modules/Tmdb";
 import {
 	StringCategory,
 	TrackerCategory,
+	TrackerTypes,
 	type ContentItem,
 } from "@/types/unit3d";
 
@@ -265,6 +266,22 @@ class TorrentManager {
 			});
 
 			return { categories: [categories] };
+		}
+
+		if (response === "types") {
+			const types = await select({
+				message: "Selecciona el tipo de torrent",
+				loop: false,
+				pageSize: 15,
+				choices: Object.entries(TrackerTypes)
+					.filter(([_, value]) => typeof value === "string")
+					.map(([value, name]) => ({
+						name: `${name}`,
+						value: `${value}`,
+					})),
+			});
+
+			return { types: [types] };
 		}
 
 		if (response === "year") {
