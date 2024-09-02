@@ -6,6 +6,7 @@ export interface ServerItemResponse<T = ServerItem> {
 export interface ServerItem {
 	Name: string;
 	ServerId: string;
+	Path: string;
 	Id: string;
 	RunTimeTicks?: number;
 	IsFolder: boolean;

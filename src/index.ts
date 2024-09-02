@@ -1,4 +1,3 @@
-import { StringCategory, type ContentItem } from "@/types/unit3d";
 import { formatFileSize, parseTorrentName } from "@/lib/parser";
 import { TorrentClient } from "@/modules/TorrentClient";
 import { Unit3d } from "@/modules/Unit3d";
@@ -6,6 +5,12 @@ import { Emby } from "@/modules/Emby";
 import { config } from "@/lib/config";
 import { Tmdb } from "@/modules/Tmdb";
 import prompts from "prompts";
+
+import {
+	StringCategory,
+	TrackerCategory,
+	type ContentItem,
+} from "@/types/unit3d";
 
 class TorrentManager {
 	private torrentClients: Array<TorrentClient>;
@@ -40,8 +45,6 @@ class TorrentManager {
 					displayName: client.DisplayName,
 				}),
 		);
-
-		this.validateConfig();
 	}
 
 	private async validateConfig() {
@@ -109,6 +112,8 @@ class TorrentManager {
 	}
 
 	public async run() {
+		await this.validateConfig();
+
 		const queries = [];
 		let addMoreQueries = true;
 
@@ -172,6 +177,18 @@ class TorrentManager {
 			search,
 			torrentClient["torrent-client"],
 		);
+
+		const repeat = await prompts({
+			type: "confirm",
+			name: "repeat",
+			message: "¿Quieres volver a buscar?",
+			initial: false,
+		});
+
+		if (repeat.repeat) {
+			console.clear();
+			await this.run();
+		}
 	}
 
 	private async promptQueryType() {
@@ -182,14 +199,16 @@ class TorrentManager {
 				message: "Selecciona el tipo de consulta",
 				choices: [
 					{ title: "Nombre", value: "name" },
-					{ title: "Descripción", value: "description" },
-					{ title: "Uploader", value: "uploader" },
+					{ title: "Año", value: "year" },
+					{ title: "Categoría", value: "categories" },
+					{ title: "Resolución", value: "resolutions" },
 					{ title: "TheMovieDB ID", value: "tmdbId" },
 					{ title: "IMDb ID", value: "imdbId" },
 					{ title: "TheTVDB ID", value: "tvdbId" },
+					{ title: "Descripción", value: "description" },
+					{ title: "Uploader", value: "uploader" },
 					{ title: "Número de Temporada", value: "seasonNumber" },
 					{ title: "Número de Episodio", value: "episodeNumber" },
-					{ title: "Resolución", value: "resolutions" },
 				],
 			},
 		]);
@@ -214,6 +233,36 @@ class TorrentManager {
 			return { [response["query-type"]]: resolution.query };
 		}
 
+		if (response["query-type"] === "categories") {
+			const categories = await prompts({
+				min: 1,
+				message: "Selecciona las categorías para filtrar",
+				type: "multiselect",
+				instructions: false,
+				name: "query",
+				choices: Object.entries(TrackerCategory)
+					.filter(([_, value]) => typeof value === "string")
+					.map(([key, value]) => ({
+						title: `${value}`,
+						value: Number(key),
+					})),
+			});
+
+			if (!categories.query) return null;
+			return { [response["query-type"]]: categories.query };
+		}
+
+		if (response["query-type"] === "year") {
+			const year = await prompts({
+				type: "number",
+				message: "Ingresa un año",
+				name: "query",
+			});
+
+			if (!year.query) return null;
+			return { startYear: year.query, endYear: year.query };
+		}
+
 		const queryResolve = await prompts({
 			type: response["query-type"].includes("Id") ? "number" : "text",
 			message: "Ingresa una consulta de búsqueda",
@@ -230,6 +279,10 @@ class TorrentManager {
 		const categories = Array.from(
 			new Set(search.map((torrent) => torrent.attributes.category)),
 		);
+
+		if (categories.length === 1) {
+			return { category: categories[0] };
+		}
 
 		return await prompts({
 			type: "select",
@@ -251,37 +304,38 @@ class TorrentManager {
 		const choices: Array<prompts.Choice> = [];
 
 		if (
-			category === StringCategory.TV ||
-			category === StringCategory.ANIME ||
-			category === StringCategory.DORAMAS ||
-			category === StringCategory.TELENOVELAS
+			category === StringCategory.Series ||
+			category === StringCategory.Doramas ||
+			category === StringCategory.Telenovelas ||
+			category === StringCategory.Anime
 		) {
 			const seriesIds = Array.from(
 				new Set(filteredTorrents.map((torrent) => torrent.attributes.tmdb_id)),
 			);
 
-			for (const serieId of seriesIds) {
-				const serie = await this.tmdb.getSerieById(serieId);
-				const embySerie = await this.emby.getSerieByTmdbId(serieId);
+			for (const tmdbId of seriesIds) {
+				const serie = await this.tmdb.getSerieById(tmdbId);
+				const embySerie = await this.emby.getSerieByTmdbId(tmdbId);
 
 				const year = serie?.first_air_date.split("-")[0];
 				const episodes = await this.emby.getEpisodesByShowId(embySerie?.Id);
+				const alreadyExists = embySerie ? "(Ya existe)" : "";
 
 				choices.push({
 					title: this.color(
 						serie
-							? `• ${serie.name} (${year}) ${embySerie ? "(Ya existe)" : ""}`
-							: `• ${embySerie?.Name || serieId} ${embySerie ? "(Ya existe)" : ""}`,
+							? `• ${serie.name} (${year}) ${alreadyExists}`
+							: `• ${embySerie?.Name || tmdbId} ${alreadyExists}`,
 						"magenta",
 					),
-					value: `skip-${serieId}`,
+					value: `skip-${tmdbId}`,
 					disabled: true,
 				});
 
 				const seasons = Array.from(
 					new Set(
 						filteredTorrents
-							.filter((torrent) => torrent.attributes.tmdb_id === serieId)
+							.filter((torrent) => torrent.attributes.tmdb_id === tmdbId)
 							.sort((a, b) => b.attributes.seeders - a.attributes.seeders)
 							.sort((a, b) => b.attributes.tmdb_id - a.attributes.tmdb_id)
 							.map((torrent) => {
@@ -307,7 +361,7 @@ class TorrentManager {
 					});
 
 					const torrents = filteredTorrents
-						.filter((t) => t.attributes.tmdb_id === serieId)
+						.filter((t) => t.attributes.tmdb_id === tmdbId)
 						.filter((torrent) => {
 							const tSeason = parseTorrentName(torrent.attributes.name).season;
 							return tSeason === (season === "Full" ? null : season);
@@ -323,7 +377,7 @@ class TorrentManager {
 					);
 				}
 			}
-		} else {
+		} else if (category === StringCategory.Peliculas) {
 			const moviesIds = Array.from(
 				new Set(filteredTorrents.map((torrent) => torrent.attributes.tmdb_id)),
 			);
@@ -349,12 +403,25 @@ class TorrentManager {
 					.sort((a, b) => b.attributes.tmdb_id - a.attributes.tmdb_id);
 
 				choices.push(
-					...torrents.map((torrent) => ({
-						title: this.displayTorrent(torrent),
-						value: torrent.id,
-					})),
+					...torrents.map((torrent) => {
+						const exists = embyMovie?.Path?.endsWith(
+							torrent.attributes.files[0].name,
+						);
+
+						return {
+							title: `${this.displayTorrent(torrent)} ${exists ? "(Ya existe)" : ""}`,
+							value: torrent.id,
+						};
+					}),
 				);
 			}
+		} else if (category === StringCategory.Ebooks) {
+			choices.push(
+				...filteredTorrents.map((torrent) => ({
+					title: this.displayTorrent(torrent),
+					value: torrent.id,
+				})),
+			);
 		}
 
 		return await prompts([
@@ -371,6 +438,10 @@ class TorrentManager {
 	}
 
 	private async promptTorrentClient() {
+		if (this.torrentClients.length === 1) {
+			return { "torrent-client": 0 };
+		}
+
 		return await prompts({
 			type: "select",
 			name: "torrent-client",
@@ -402,13 +473,13 @@ class TorrentManager {
 				continue;
 			}
 
-			if (torrentData.attributes.category === StringCategory.MOVIES) {
+			if (torrentData.attributes.category === StringCategory.Peliculas) {
 				await this.downloadMovie(torrentData, client);
 			} else if (
-				torrentData.attributes.category === StringCategory.TV ||
-				torrentData.attributes.category === StringCategory.DORAMAS ||
-				torrentData.attributes.category === StringCategory.TELENOVELAS ||
-				torrentData.attributes.category === StringCategory.ANIME
+				torrentData.attributes.category === StringCategory.Series ||
+				torrentData.attributes.category === StringCategory.Doramas ||
+				torrentData.attributes.category === StringCategory.Telenovelas ||
+				torrentData.attributes.category === StringCategory.Anime
 			) {
 				await this.downloadSeries(torrentData, client);
 			} else {
@@ -466,13 +537,19 @@ class TorrentManager {
 			});
 		}
 
+		const seasonText = `${season ? `(S${season}` : ""}${episode ? `E${episode})` : ")"}`;
 		console.log(
-			`[✔] ${season ? `(S${season}` : ""}${episode ? `E${episode})` : ")"} ${this.displayTorrent(torrentData, false)} » ${client.displayName}`,
+			`[✔] ${seasonText} ${this.displayTorrent(torrentData, false)} » ${client.displayName}`,
 		);
 	}
 
 	displayTorrent(torrentData: ContentItem, displaySeeders = true) {
-		return `${displaySeeders ? `[🌱 ${torrentData.attributes.seeders.toString().padStart(2)}] ` : ""}[${formatFileSize(torrentData.attributes.size)}] » ${torrentData.attributes.name}`;
+		const size = `[${formatFileSize(torrentData.attributes.size)}]`;
+		const seeders = displaySeeders
+			? `[🌱 ${torrentData.attributes.seeders.toString().padStart(2)}] `
+			: "";
+
+		return `${seeders}${size} » ${torrentData.attributes.name}`;
 	}
 
 	color(message: string, color: "magenta" | "blue" | "green") {
