@@ -2,6 +2,7 @@ interface GeneralSettings {
 	ApiUrl: string;
 	ApiKey: string;
 	FilterTags: Array<string>;
+	ShowDownloadedTorrents: boolean;
 	DownloadTorrentsToFolder: boolean;
 	TorrentsFolder: string;
 }

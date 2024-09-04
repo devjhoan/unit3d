@@ -3,6 +3,7 @@ import { freeleech, queryTypes, resolutions } from "./lib/constants";
 import { calculateDownloadTime } from "@/lib/calculateDownloadTime";
 import { formatFileSize, parseTorrentName } from "@/lib/parser";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { hasValidLanguage } from "./lib/hasValdLanguage";
 import { TorrentClient } from "@/modules/TorrentClient";
 import { Unit3d } from "@/modules/Unit3d";
 import { Emby } from "@/modules/Emby";
@@ -211,7 +212,10 @@ class TorrentManager {
 		if (config.GeneralSettings.DownloadTorrentsToFolder) {
 			await this.downloadTorrentsToFolder(responseTorrents, search);
 		} else {
-			const torrentClient = await this.promptTorrentClient(search);
+			const torrentClient = await this.promptTorrentClient(
+				responseTorrents,
+				search,
+			);
 			if (torrentClient === undefined) {
 				console.error("No se seleccionó un cliente de torrent");
 				process.exit(1);
@@ -244,11 +248,12 @@ class TorrentManager {
 
 		if (!response) return null;
 		if (response === "resolutions") {
-			const resolution = await select({
+			const resolution = await checkbox({
 				message: "Selecciona una resolución",
 				choices: resolutions,
 				loop: false,
 				pageSize: 15,
+				required: true,
 			});
 
 			return { resolutions: resolution };
@@ -304,6 +309,20 @@ class TorrentManager {
 				required: true,
 				validate: (value) => {
 					const year = Number(value);
+
+					if (value.includes("-")) {
+						const [startYear, endYear] = value.split("-").map(Number);
+						if (Number.isNaN(startYear) || Number.isNaN(endYear)) {
+							return "Por favor, ingresa un rango de años válido.";
+						}
+
+						if (startYear < 1900 || endYear > new Date().getFullYear()) {
+							return "Por favor, ingresa un rango de años válido.";
+						}
+
+						return true;
+					}
+
 					if (
 						Number.isNaN(year) ||
 						year < 1900 ||
@@ -317,6 +336,11 @@ class TorrentManager {
 			});
 
 			if (!year) return null;
+			if (year.includes("-")) {
+				const [startYear, endYear] = year.split("-");
+				return { startYear, endYear };
+			}
+
 			return { startYear: year, endYear: year };
 		}
 
@@ -398,10 +422,23 @@ class TorrentManager {
 				const episodes = await this.emby.getEpisodesByShowId(embySerie?.Id);
 				const alreadyExists = embySerie ? "(Ya existe)" : "";
 
+				const embySeasons = [
+					...new Set(episodes.map((episode) => episode.ParentIndexNumber)),
+				];
+
 				const torrents = filteredTorrents
+					.filter((torrent) => {
+						if (config.GeneralSettings.ShowDownloadedTorrents) return true;
+						const { season } = parseTorrentName(torrent.attributes.name);
+						return season !== "Full" && !embySeasons.includes(Number(season));
+					})
 					.filter((torrent) => torrent.attributes.tmdb_id === tmdbId)
 					.sort((a, b) => b.attributes.seeders - a.attributes.seeders)
 					.sort((a, b) => b.attributes.tmdb_id - a.attributes.tmdb_id);
+
+				if (torrents.length === 0) {
+					continue;
+				}
 
 				choices.push(
 					new Separator(
@@ -426,11 +463,6 @@ class TorrentManager {
 				).sort((a, b) => parseInt(a) - parseInt(b));
 
 				for (const season of seasons) {
-					const alreadyExists =
-						episodes.find(
-							(episode) => episode.ParentIndexNumber === Number(season),
-						) || "";
-
 					choices.push(
 						new Separator(
 							this.color(
@@ -449,7 +481,7 @@ class TorrentManager {
 
 					choices.push(
 						...seasonTorrents.map((torrent) => ({
-							name: `  ${this.displayTorrent(torrent)}`,
+							name: `  ${this.displayTorrent(torrent)} ${hasValidLanguage(torrent.attributes?.media_info) ? "" : "(Subs no válidas)"}`,
 							value: torrent.id,
 						})),
 					);
@@ -464,30 +496,43 @@ class TorrentManager {
 				const movie = await this.tmdb.getMovieById(movieId);
 				const embyMovie = await this.emby.getMovieByTmdbId(movieId);
 
+				const title = movie
+					? `${movie.title} (${movie.release_date.split("-")[0]})`
+					: `${embyMovie?.Name || movieId}`;
+
+				const torrents = filteredTorrents
+					.filter(() => {
+						if (config.GeneralSettings.ShowDownloadedTorrents) return true;
+						return !embyMovie;
+					})
+					.filter((torrent) => torrent.attributes.tmdb_id === movieId)
+					.sort((a, b) => b.attributes.seeders - a.attributes.seeders)
+					.sort((a, b) => b.attributes.tmdb_id - a.attributes.tmdb_id);
+
+				if (torrents.length === 0) {
+					continue;
+				}
+
 				choices.push(
 					new Separator(
 						this.color(
-							movie
-								? `• ${movie.title} (${movie.release_date.split("-")[0]}) ${embyMovie ? "(Ya existe)" : ""}`
-								: `• ${embyMovie?.Name || movieId} ${embyMovie ? "(Ya existe)" : ""}`,
+							`• ${title} ${embyMovie ? "(Ya existe)" : ""}`,
 							embyMovie ? "green" : "magenta",
 						),
 					),
 				);
 
-				const torrents = filteredTorrents
-					.filter((torrent) => torrent.attributes.tmdb_id === movieId)
-					.sort((a, b) => b.attributes.seeders - a.attributes.seeders)
-					.sort((a, b) => b.attributes.tmdb_id - a.attributes.tmdb_id);
-
 				choices.push(
 					...torrents.map((torrent) => {
+						const validLanguage = hasValidLanguage(
+							torrent.attributes?.media_info,
+						);
 						const exists = embyMovie?.Path?.endsWith(
 							torrent.attributes.files[0].name,
 						);
 
 						return {
-							name: `${this.displayTorrent(torrent)} ${exists ? "(Ya existe)" : ""}`,
+							name: `${this.displayTorrent(torrent)} ${exists ? "(Ya existe)" : ""} ${validLanguage ? "" : "(Subs no válidas)"}`,
 							value: torrent.id,
 						};
 					}),
@@ -528,11 +573,21 @@ class TorrentManager {
 		});
 	}
 
-	private async promptTorrentClient(torrents: Array<ContentItem>) {
-		if (this.torrentClients.length === 1) return 0;
-		const size = torrents.reduce((acc, curr) => acc + curr.attributes.size, 0);
+	private async promptTorrentClient(
+		search: Array<string>,
+		torrents: Array<ContentItem>,
+	) {
+		const filteredTorrents = torrents.filter((torrent) =>
+			search.includes(torrent.id),
+		);
 
-		const hint = `Usted esta a punto de descargar ${torrents.length} torrents con un tamaño total de (${formatFileSize(size)})`;
+		if (this.torrentClients.length === 1) return 0;
+		const size = filteredTorrents.reduce(
+			(acc, curr) => acc + curr.attributes.size,
+			0,
+		);
+
+		const hint = `Usted esta a punto de descargar ${filteredTorrents.length} torrents con un tamaño total de (${formatFileSize(size)})`;
 		return await select({
 			message: "Selecciona el cliente de torrent que deseas usar",
 			default: 0,
@@ -557,13 +612,37 @@ class TorrentManager {
 		search: Array<ContentItem>,
 		torrentClient: number,
 	) {
+		let torrentCount = 0;
+		const filteredTorrents = search.filter((torrent) =>
+			responseTorrents.includes(torrent.id),
+		);
+
+		if (filteredTorrents.length > 30) {
+			console.log(
+				"[!] Se descargarán más de 30 torrents, esto puede tardar un tiempo debido a la limitación del tracker.",
+			);
+
+			console.log(
+				`[!] Tiempo estimado: ${calculateDownloadTime(filteredTorrents.length)} minutos`,
+			);
+		}
+
 		for (const torrent of responseTorrents) {
-			const torrentData = search.find((t) => t.id === torrent);
+			const torrentData = filteredTorrents.find((t) => t.id === torrent);
 			const client = this.torrentClients[torrentClient];
 
 			if (!torrentData) {
 				console.error(`[-] Torrent no encontrado: ${torrent}`);
 				continue;
+			}
+
+			if (torrentCount > 30) {
+				console.error(
+					"[!] Se ha excedido el límite de descargas, esperando 1 minuto para seguir...",
+				);
+
+				await new Promise((resolve) => setTimeout(resolve, 60000));
+				torrentCount = 0;
 			}
 
 			if (torrentData.attributes.category === StringCategory.Peliculas) {
@@ -592,6 +671,8 @@ class TorrentManager {
 					category: torrentData.attributes.category,
 				});
 			}
+
+			torrentCount++;
 		}
 	}
 
@@ -600,45 +681,40 @@ class TorrentManager {
 		search: Array<ContentItem>,
 	) {
 		const torrentsFolder = config.GeneralSettings.TorrentsFolder;
-		if (search.length > 30) {
+		const filteredTorrents = search.filter((torrent) =>
+			responseTorrents.includes(torrent.id),
+		);
+
+		if (filteredTorrents.length > 30) {
 			console.log(
 				"[!] Se descargarán más de 30 torrents, esto puede tardar un tiempo debido a la limitación del tracker.",
 			);
 
 			console.log(
-				`[!] Tiempo estimado: ${calculateDownloadTime(search.length)} minutos`,
+				`[!] Tiempo estimado: ${calculateDownloadTime(filteredTorrents.length)} minutos`,
 			);
 		}
 
 		for (const torrent of responseTorrents) {
-			const torrentData = search.find((t) => t.id === torrent);
+			const torrentData = filteredTorrents.find((t) => t.id === torrent);
 			if (!torrentData) {
 				console.error(`[-] Torrent no encontrado: ${torrent}`);
 				continue;
 			}
 
-			const response = await fetch(torrentData.attributes.download_link);
+			let response = await fetch(torrentData.attributes.download_link);
 			if (response.status === 429) {
 				console.error(
 					"[!] Se ha excedido el límite de descargas, esperando 1 minuto para seguir...",
 				);
-				await new Promise((resolve) => setTimeout(resolve, 50000));
-				continue;
+
+				await new Promise((resolve) => setTimeout(resolve, 60000));
+				response = await fetch(torrentData.attributes.download_link);
 			}
 
 			const buffer = Buffer.from(await response.arrayBuffer());
-
-			// < (less than)
-			// > (greater than)
-			// : (colon - sometimes works, but is actually NTFS Alternate Data Streams)
-			// " (double quote)
-			// / (forward slash)
-			// \ (backslash)
-			// | (vertical bar or pipe)
-			// ? (question mark)
-			// * (asterisk)
-
 			const invalidCharactersRegex = /[<>:"/\\|?*]/g;
+
 			const fileName = torrentData.attributes.name.replace(
 				invalidCharactersRegex,
 				"",
@@ -647,7 +723,7 @@ class TorrentManager {
 			const filePath = `${torrentsFolder}/${fileName}.torrent`;
 			writeFileSync(filePath, buffer);
 
-			console.log(`(${response.status}) [✔] ${fileName} » ${filePath}`);
+			console.log(`[✔] ${fileName} » ${filePath}`);
 		}
 	}
 

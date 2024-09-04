@@ -65,7 +65,18 @@ export class Unit3d {
 					nextCursor = response.meta.next_cursor;
 				}
 
-				torrents.push(...response.data);
+				const filteredTorrents = response.data
+					.filter((torrent) => torrent.attributes.seeders > 0)
+					.filter((torrent) =>
+						config.GeneralSettings.FilterTags.some(
+							(tag) =>
+								!torrent.attributes.name
+									.toLowerCase()
+									.includes(tag.toLowerCase()),
+						),
+					);
+
+				torrents.push(...filteredTorrents);
 				spinner.text = `Buscando torrents... (${torrents.length})`;
 			} catch (error) {
 				console.error(error);
