@@ -24,6 +24,7 @@
 	"dependencies": {
 		"@inquirer/prompts": "^5.3.8",
 		"@robertklep/qbittorrent": "^1.0.1",
+		"ora": "^8.1.0",
 		"yaml": "^2.5.1"
 	}
 }

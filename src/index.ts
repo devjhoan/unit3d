@@ -1,4 +1,6 @@
 import { checkbox, confirm, input, select, Separator } from "@inquirer/prompts";
+import { freeleech, queryTypes, resolutions } from "./lib/constants";
+import { calculateDownloadTime } from "@/lib/calculateDownloadTime";
 import { formatFileSize, parseTorrentName } from "@/lib/parser";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { TorrentClient } from "@/modules/TorrentClient";
@@ -6,12 +8,14 @@ import { Unit3d } from "@/modules/Unit3d";
 import { Emby } from "@/modules/Emby";
 import { config } from "@/lib/config";
 import { Tmdb } from "@/modules/Tmdb";
+import ora from "ora";
 
 import {
-	StringCategory,
-	TrackerCategory,
-	TrackerTypes,
 	type ContentItem,
+	type QueyParams,
+	TrackerCategory,
+	StringCategory,
+	TrackerTypes,
 } from "@/types/unit3d";
 
 class TorrentManager {
@@ -136,7 +140,7 @@ class TorrentManager {
 	public async run() {
 		await this.validateConfig();
 
-		let queries = {};
+		let queries: QueyParams = {};
 		let addMoreQueries = true;
 
 		while (addMoreQueries) {
@@ -153,12 +157,39 @@ class TorrentManager {
 			});
 
 			addMoreQueries = addMoreResponse;
+			if (addMoreResponse) {
+				process.stdout.moveCursor(0, -1);
+				process.stdout.write("\r\x1b[K");
+			}
 		}
 
-		const search = await this.api.search({
-			...queries,
-			perPage: 100,
-		});
+		const timeStart = performance.now();
+		const spinner = ora("Buscando torrents...").start();
+
+		let search: Array<ContentItem> = [];
+
+		if (queries.maxTorrents) {
+			search = await this.api.searchAll(
+				{
+					...queries,
+					perPage: 100,
+				},
+				spinner,
+			);
+		} else {
+			search = await this.api.search({
+				...queries,
+				perPage: 100,
+			});
+		}
+
+		const size = search.reduce((acc, curr) => acc + curr.attributes.size, 0);
+		const takeTime = Math.floor(performance.now() - timeStart);
+		const indicator = takeTime < 1000 ? "ms" : "s";
+
+		spinner.succeed(
+			`Se encontraron ${search.length} (${formatFileSize(size)}) torrents en ${takeTime > 1000 ? (takeTime / 1000).toFixed(2) : takeTime} ${indicator}`,
+		);
 
 		if (search.length === 0) {
 			console.error("No se encontraron torrents en la búsqueda");
@@ -180,7 +211,7 @@ class TorrentManager {
 		if (config.GeneralSettings.DownloadTorrentsToFolder) {
 			await this.downloadTorrentsToFolder(responseTorrents, search);
 		} else {
-			const torrentClient = await this.promptTorrentClient();
+			const torrentClient = await this.promptTorrentClient(search);
 			if (torrentClient === undefined) {
 				console.error("No se seleccionó un cliente de torrent");
 				process.exit(1);
@@ -206,77 +237,18 @@ class TorrentManager {
 	> | null> {
 		const response = await select({
 			message: "Selecciona el tipo de consulta",
+			choices: queryTypes,
 			loop: false,
 			pageSize: 15,
-			choices: [
-				{
-					name: "Nombre",
-					value: "name",
-				},
-				{
-					name: "Año",
-					value: "year",
-				},
-				{
-					name: "Categoría",
-					value: "categories",
-				},
-				{
-					name: "Resolución",
-					value: "resolutions",
-				},
-				{
-					name: "TheMovieDB ID",
-					value: "tmdbId",
-				},
-				{
-					name: "IMDb ID",
-					value: "imdbId",
-				},
-				{
-					name: "TheTVDB ID",
-					value: "tvdbId",
-				},
-				{
-					name: "Tipo de Torrent",
-					value: "types",
-				},
-				{
-					name: "Descripción",
-					value: "description",
-				},
-				{
-					name: "Freeleech %",
-					value: "free",
-				},
-				{
-					name: "Uploader",
-					value: "uploader",
-				},
-				{
-					name: "Número de Temporada",
-					value: "seasonNumber",
-				},
-				{
-					name: "Número de Episodio",
-					value: "episodeNumber",
-				},
-			],
 		});
 
 		if (!response) return null;
 		if (response === "resolutions") {
 			const resolution = await select({
 				message: "Selecciona una resolución",
+				choices: resolutions,
 				loop: false,
 				pageSize: 15,
-				choices: [
-					{ name: "2160p (4K)", value: "2" },
-					{ name: "1080p (FHD)", value: "3" },
-					{ name: "720p (HD)", value: "5" },
-					{ name: "540p (qHD)", value: "7" },
-					{ name: "480p (SD)", value: "8" },
-				],
 			});
 
 			return { resolutions: resolution };
@@ -317,16 +289,10 @@ class TorrentManager {
 		if (response === "free") {
 			const free = await select({
 				message: "Ingresa el porcentaje de freeleech (0-100)",
+				choices: freeleech,
 				default: "100",
 				pageSize: 15,
 				loop: false,
-				choices: [
-					{ name: "100%", value: "100" },
-					{ name: "75%", value: "75" },
-					{ name: "50%", value: "50" },
-					{ name: "25%", value: "25" },
-					{ name: "0%", value: "0" },
-				],
 			});
 
 			return { free: free };
@@ -352,6 +318,23 @@ class TorrentManager {
 
 			if (!year) return null;
 			return { startYear: year, endYear: year };
+		}
+
+		if (response === "maxTorrents") {
+			const maxTorrents = await input({
+				message: "Ingresa el número máximo de torrents a buscar",
+				default: "100",
+				validate: (value) => {
+					const maxTorrents = Number(value);
+					if (Number.isNaN(maxTorrents) || maxTorrents < 0) {
+						return "Por favor, ingresa un número válido.";
+					}
+
+					return true;
+				},
+			});
+
+			return { maxTorrents: maxTorrents };
 		}
 
 		const queryResolve = await input({
@@ -524,6 +507,16 @@ class TorrentManager {
 			choices: choices,
 			pageSize: 25,
 			required: true,
+			theme: {
+				helpMode: "always",
+				style: {
+					renderSelectedChoices: (
+						selectedChoices: Array<{ name: string; value: string }>,
+					) => {
+						return selectedChoices.map((choice) => choice.value).join(", ");
+					},
+				},
+			},
 			loop: false,
 			validate: (value) => {
 				if (value.length === 0) {
@@ -535,9 +528,11 @@ class TorrentManager {
 		});
 	}
 
-	private async promptTorrentClient() {
+	private async promptTorrentClient(torrents: Array<ContentItem>) {
 		if (this.torrentClients.length === 1) return 0;
+		const size = torrents.reduce((acc, curr) => acc + curr.attributes.size, 0);
 
+		const hint = `Usted esta a punto de descargar ${torrents.length} torrents con un tamaño total de (${formatFileSize(size)})`;
 		return await select({
 			message: "Selecciona el cliente de torrent que deseas usar",
 			default: 0,
@@ -546,10 +541,12 @@ class TorrentManager {
 				...this.torrentClients.map((client) => ({
 					name: client.displayName,
 					value: this.torrentClients.indexOf(client),
+					description: hint,
 				})),
 				{
 					name: "Random",
 					value: Math.floor(Math.random() * this.torrentClients.length),
+					description: hint,
 				},
 			],
 		});
@@ -603,6 +600,15 @@ class TorrentManager {
 		search: Array<ContentItem>,
 	) {
 		const torrentsFolder = config.GeneralSettings.TorrentsFolder;
+		if (search.length > 30) {
+			console.log(
+				"[!] Se descargarán más de 30 torrents, esto puede tardar un tiempo debido a la limitación del tracker.",
+			);
+
+			console.log(
+				`[!] Tiempo estimado: ${calculateDownloadTime(search.length)} minutos`,
+			);
+		}
 
 		for (const torrent of responseTorrents) {
 			const torrentData = search.find((t) => t.id === torrent);
@@ -612,13 +618,36 @@ class TorrentManager {
 			}
 
 			const response = await fetch(torrentData.attributes.download_link);
+			if (response.status === 429) {
+				console.error(
+					"[!] Se ha excedido el límite de descargas, esperando 1 minuto para seguir...",
+				);
+				await new Promise((resolve) => setTimeout(resolve, 50000));
+				continue;
+			}
+
 			const buffer = Buffer.from(await response.arrayBuffer());
 
-			const fileName = torrentData.attributes.name;
-			const filePath = `${torrentsFolder}/${fileName}`;
+			// < (less than)
+			// > (greater than)
+			// : (colon - sometimes works, but is actually NTFS Alternate Data Streams)
+			// " (double quote)
+			// / (forward slash)
+			// \ (backslash)
+			// | (vertical bar or pipe)
+			// ? (question mark)
+			// * (asterisk)
 
+			const invalidCharactersRegex = /[<>:"/\\|?*]/g;
+			const fileName = torrentData.attributes.name.replace(
+				invalidCharactersRegex,
+				"",
+			);
+
+			const filePath = `${torrentsFolder}/${fileName}.torrent`;
 			writeFileSync(filePath, buffer);
-			console.log(`[✔] ${fileName} » ${filePath}`);
+
+			console.log(`(${response.status}) [✔] ${fileName} » ${filePath}`);
 		}
 	}
 
@@ -629,9 +658,7 @@ class TorrentManager {
 			category: "movies",
 		});
 
-		console.log(
-			`[✔] ${this.displayTorrent(torrentData, false)} » ${client.displayName}`,
-		);
+		console.log(`[✔] ${this.displayTorrent(torrentData, false)}`);
 	}
 
 	private async downloadSeries(
@@ -670,9 +697,7 @@ class TorrentManager {
 		}
 
 		const seasonText = `${season ? `(S${season}` : ""}${episode ? `E${episode})` : ")"}`;
-		console.log(
-			`[✔] ${seasonText} ${this.displayTorrent(torrentData, false)} » ${client.displayName}`,
-		);
+		console.log(`[✔] ${seasonText} ${this.displayTorrent(torrentData, false)}`);
 	}
 
 	displayTorrent(torrentData: ContentItem, displaySeeders = true) {

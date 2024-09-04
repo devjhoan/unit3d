@@ -1,5 +1,13 @@
+import { queryTypes } from "@/lib/constants";
+
 export interface Unit3dSearchResult<T> {
 	data: Array<T>;
+	meta: {
+		path: string;
+		per_page: number;
+		next_cursor: string | null;
+		prev_cursor: string | null;
+	};
 }
 
 export interface ContentItem {
@@ -33,57 +41,6 @@ export enum TrackerTypes {
 	WebDl = 4,
 	WebRip = 5,
 	HDTV = 6,
-}
-
-export interface QueryParams {
-	// torrent name
-	name?: string;
-	// torrent description
-	description?: string;
-	// torrent uploader
-	uploader?: string;
-	// torrent category
-	categories?: Array<TrackerCategory>;
-	// torrent TMDB ID
-	tmdbId?: number;
-	// torrent IMDB ID
-	imdbId?: string;
-	// torrent TVDB ID
-	tvdbId?: number;
-	// amount of results to return per page
-	perPage?: number;
-	// page number
-	page?: number;
-	// sort field
-	sortField?: string;
-	// sort direction
-	sortDirection?: "asc" | "desc";
-	// torrent resolution
-	resolutions?: Array<string>;
-	// torrent type
-	types?: Array<string>;
-	// torrent genre
-	genres?: Array<string>;
-	// torrent season number
-	seasonNumber?: number;
-	// torrent episode number
-	episodeNumber?: number;
-	// torrent freeleech discount
-	free?: number;
-	// torrent double upload
-	doubleup?: boolean;
-	// torrent featured
-	featured?: boolean;
-	// torrent refundable
-	refundable?: boolean;
-	// torrent stream
-	stream?: boolean;
-	// torrent SD
-	sd?: boolean;
-	// torrent highspeed
-	highspeed?: boolean;
-	// torrent internal
-	internal?: boolean;
 }
 
 interface Attributes {
@@ -133,3 +90,16 @@ interface Meta {
 	poster: string;
 	genres: string;
 }
+
+const extendedQuerys = [
+	...queryTypes,
+	{
+		name: "perPage",
+		value: "perPage",
+	},
+] as const;
+
+type QueryTypeValues = (typeof extendedQuerys)[number]["value"];
+export type QueyParams = Partial<{
+	[K in QueryTypeValues]: string | string[] | number;
+}>;
