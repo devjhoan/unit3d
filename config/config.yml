@@ -45,3 +45,6 @@ TorrentClients:
     DisplayName: "Home"
     Username: "admin"
     Password: "Contraseña1234"
+
+# No modificar esta línea (se usa para actualizar la configuración)
+Version: 1.0.1

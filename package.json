@@ -1,17 +1,20 @@
 {
 	"name": "unit3d-downloader",
+	"description": "🎠 | Unit3d Torrent Downloader",
+	"author": "jhoan.me (znotjhoan@gmail.com)",
 	"module": "src/index.ts",
+	"version": "1.0.1",
 	"type": "module",
 	"license": "CC BY-NC 4.0",
 	"scripts": {
 		"start": "bun run src/index.ts",
 		"dev": "bun run start --hot",
-		"format": "bunx biome format"
+		"format": "bunx biome format",
+		"update": "bun run src/update/index.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "1.8.3",
 		"@types/bun": "latest",
-		"@types/js-yaml": "^4.0.9",
 		"@types/node": "^22.5.1",
 		"@types/prompts": "^2.4.9"
 	},
@@ -21,6 +24,6 @@
 	"dependencies": {
 		"@inquirer/prompts": "^5.3.8",
 		"@robertklep/qbittorrent": "^1.0.1",
-		"js-yaml": "^4.1.0"
+		"yaml": "^2.5.1"
 	}
 }

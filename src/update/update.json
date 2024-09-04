@@ -1,0 +1,32 @@
+[
+	{
+		"actualVersion": "1.0.0",
+		"updateVersion": "1.0.1",
+		"changelog": [
+			{
+				"title": "Actualización",
+				"description": "Se ha actualizado el script a la versión 1.0.1",
+				"type": "update"
+			}
+		],
+		"config": [
+			{
+				"key": "GeneralSettings.DownloadTorrentsToFolder",
+				"comment": "Descargar archivo .torrent directamente a una carpeta en lugar de usar un cliente de torrent",
+				"value": true
+			},
+			{
+				"key": "GeneralSettings.TorrentsFolder",
+				"comment": "(solo se usará si DownloadTorrentsToFolder es true) Directorio donde se descargarán los torrents",
+				"value": "torrents"
+			},
+			{
+				"key": "FolderSettings.E-Books",
+				"comment": [
+					"Categorias personalizadas (key es tomado desde unit3d, value es la carpeta donde se descargará)"
+				],
+				"value": "/downloads/ebooks"
+			}
+		]
+	}
+]

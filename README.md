@@ -50,6 +50,26 @@ bun run src/index.ts
 
 La configuración se encuentra en el archivo `config.yml`, puedes modificar los valores según tus necesidades.
 
+# 🚧 Actualizando el script
+
+- **1.** Actualiza el repositorio
+
+```bash
+git pull origin master
+```
+
+- **2.** Actualiza las dependencias
+
+```bash
+bun install
+```
+
+- **3.** Ejecuta el script de actualización
+
+```bash
+bun run src/update.ts
+```
+
 # 📸 Imagenes
 
 ![Select Query](./images/select-query.png)
