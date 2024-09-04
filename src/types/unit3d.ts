@@ -23,7 +23,7 @@ export enum StringCategory {
 	Anime = "Anime",
 	Doramas = "Doramas & Turcas",
 	Telenovelas = "Telenovelas",
-	Ebooks = "Ebooks",
+	Ebooks = "E-Books",
 }
 
 export enum TrackerTypes {

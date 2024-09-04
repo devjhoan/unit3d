@@ -5,15 +5,22 @@ GeneralSettings:
   ApiKey: "Tu-Api-Key-Aqui"
   # Los Tags que definas en el filtro serán ignorados en la búsqueda
   FilterTags: ["SUBS"]
+  # Descargar archivo .torrent directamente a una carpeta en lugar de usar un cliente de torrent
+  DownloadTorrentsToFolder: true
+  # (solo se usará si DownloadTorrentsToFolder es true) Directorio donde se descargarán los torrents
+  TorrentsFolder: "torrents"
 
 FolderSettings:
   # Directorio donde se descargarán las películas
   Movies: "/downloads/movies"
   # Directorio donde se descargarán las series
-  TV: "/downloads/series"
   # Las series se descargarán en subdirectorios por cada serie y/o temporada, ejemplo:
   # series/Breaking Bad (2008)/Season 01/ -> Se descargará en una carpeta Season solamente si es un single episode
   # series/Breaking Bad (2008)/ -> Se descargará directamente en la carpeta de la serie si es un season pack
+  TV: "/downloads/series"
+  # Categorias personalizadas (key es tomado desde unit3d, value es la carpeta donde se descargará)
+  # [key] = "value"
+  E-Books: "/downloads/ebooks"
 
 TmdbSettings:
   # Url de la api de tmdb (no modificar)
@@ -28,7 +35,7 @@ EmbySettings:
   # Url donde se encuentra tu servidor Emby
   ApiUrl: "http://emby.server.local"
   # Tu api key de Emby (http://emby.local/web/index.html#!/apikeys)
-  ApiKey: "fbfb7fd68e744dd3b1300f27f3879cf4"
+  ApiKey: "fbfb7ed68e753dd3b1300f27f3972cf4"
   # Un usuario de Emby con acceso a todas las bibliotecas
   Username: "jhoan.me"
 

@@ -1,5 +1,6 @@
 import { checkbox, confirm, input, select, Separator } from "@inquirer/prompts";
 import { formatFileSize, parseTorrentName } from "@/lib/parser";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { TorrentClient } from "@/modules/TorrentClient";
 import { Unit3d } from "@/modules/Unit3d";
 import { Emby } from "@/modules/Emby";
@@ -54,6 +55,24 @@ class TorrentManager {
 			process.exit(1);
 		}
 
+		if (config.GeneralSettings?.DownloadTorrentsToFolder === undefined) {
+			console.error("La opción DownloadTorrentsToFolder no está configurada");
+			process.exit(1);
+		}
+
+		if (
+			config.GeneralSettings.DownloadTorrentsToFolder &&
+			!config.GeneralSettings.TorrentsFolder
+		) {
+			console.error("La carpeta de torrents no está configurada");
+			process.exit(1);
+		} else {
+			const torrentsFolder = config.GeneralSettings.TorrentsFolder;
+			if (!existsSync(torrentsFolder)) {
+				mkdirSync(torrentsFolder, { recursive: true });
+			}
+		}
+
 		if (!config.FolderSettings.Movies) {
 			console.error("La carpeta de películas no está configurada");
 			process.exit(1);
@@ -100,14 +119,16 @@ class TorrentManager {
 			process.exit(1);
 		}
 
-		for await (const torrentClient of this.torrentClients) {
-			const clientId = await torrentClient.getClientId();
+		if (!config.GeneralSettings.DownloadTorrentsToFolder) {
+			for await (const torrentClient of this.torrentClients) {
+				const clientId = await torrentClient.getClientId();
 
-			if (!clientId) {
-				console.error(
-					`La conexión con ${torrentClient.displayName} no se pudo establecer correctamente`,
-				);
-				process.exit(1);
+				if (!clientId) {
+					console.error(
+						`La conexión con ${torrentClient.displayName} no se pudo establecer correctamente`,
+					);
+					process.exit(1);
+				}
 			}
 		}
 	}
@@ -121,7 +142,7 @@ class TorrentManager {
 		while (addMoreQueries) {
 			const response = await this.promptQueryType();
 			if (!response) {
-				console.log("No se proporcionó ninguna consulta de búsqueda");
+				console.error("No se proporcionó ninguna consulta de búsqueda");
 				return process.exit(1);
 			}
 
@@ -156,13 +177,18 @@ class TorrentManager {
 			process.exit(1);
 		}
 
-		const torrentClient = await this.promptTorrentClient();
-		if (torrentClient === undefined) {
-			console.error("No se seleccionó un cliente de torrent");
-			process.exit(1);
+		if (config.GeneralSettings.DownloadTorrentsToFolder) {
+			await this.downloadTorrentsToFolder(responseTorrents, search);
+		} else {
+			const torrentClient = await this.promptTorrentClient();
+			if (torrentClient === undefined) {
+				console.error("No se seleccionó un cliente de torrent");
+				process.exit(1);
+			}
+
+			await this.downloadTorrents(responseTorrents, search, torrentClient);
 		}
 
-		await this.downloadTorrents(responseTorrents, search, torrentClient);
 		const repeat = await confirm({
 			message: "¿Quieres volver a buscar?",
 			default: false,
@@ -484,7 +510,7 @@ class TorrentManager {
 					}),
 				);
 			}
-		} else if (category === StringCategory.Ebooks) {
+		} else {
 			choices.push(
 				...filteredTorrents.map((torrent) => ({
 					name: this.displayTorrent(torrent),
@@ -553,10 +579,46 @@ class TorrentManager {
 			) {
 				await this.downloadSeries(torrentData, client);
 			} else {
-				console.error(
-					`[-] Categoría no soportada: ${torrentData.attributes.category}`,
-				);
+				const downloadFolder =
+					config.FolderSettings[torrentData.attributes.category];
+
+				if (!downloadFolder) {
+					console.error(
+						`[-] Categoria no encontrada: ${torrentData.attributes.category}`,
+					);
+					continue;
+				}
+
+				await client.addTorrent({
+					torrentUrl: torrentData.attributes.download_link,
+					savePath: downloadFolder,
+					category: torrentData.attributes.category,
+				});
 			}
+		}
+	}
+
+	private async downloadTorrentsToFolder(
+		responseTorrents: Array<string>,
+		search: Array<ContentItem>,
+	) {
+		const torrentsFolder = config.GeneralSettings.TorrentsFolder;
+
+		for (const torrent of responseTorrents) {
+			const torrentData = search.find((t) => t.id === torrent);
+			if (!torrentData) {
+				console.error(`[-] Torrent no encontrado: ${torrent}`);
+				continue;
+			}
+
+			const response = await fetch(torrentData.attributes.download_link);
+			const buffer = Buffer.from(await response.arrayBuffer());
+
+			const fileName = torrentData.attributes.name;
+			const filePath = `${torrentsFolder}/${fileName}`;
+
+			writeFileSync(filePath, buffer);
+			console.log(`[✔] ${fileName} » ${filePath}`);
 		}
 	}
 

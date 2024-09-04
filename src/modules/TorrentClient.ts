@@ -13,7 +13,7 @@ interface TorrentClientOptions {
 interface TorrentAddParams {
 	torrentUrl: string;
 	savePath: string;
-	category: "series" | "movies";
+	category: string;
 }
 
 export class TorrentClient {
@@ -38,7 +38,12 @@ export class TorrentClient {
 		return await this.client.torrents.categories();
 	}
 
-	async getClientId() {
-		return await this.client.app.version();
+	async getClientId(): Promise<string | null> {
+		try {
+			return await this.client.app.version();
+		} catch (error) {
+			console.error(error);
+			return null;
+		}
 	}
 }
