@@ -52,6 +52,8 @@ La configuración se encuentra en el archivo `config.yml`, puedes modificar los 
 
 # 🚧 Actualizando el script
 
+Es muy importante que actualices el script antes de ejecutar la aplicación, de lo contrario, podrías tener problemas con la configuración.
+
 - **1.** Actualiza el repositorio
 
 ```bash
@@ -67,7 +69,7 @@ bun install
 - **3.** Ejecuta el script de actualización
 
 ```bash
-bun run src/update.ts
+bun run src/update/index.ts
 ```
 
 # 📸 Imagenes
