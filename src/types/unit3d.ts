@@ -34,15 +34,6 @@ export enum StringCategory {
 	Ebooks = "E-Books",
 }
 
-export enum TrackerTypes {
-	FullDisc = 1,
-	Remux = 2,
-	Encode = 3,
-	WebDl = 4,
-	WebRip = 5,
-	HDTV = 6,
-}
-
 interface Attributes {
 	meta: Meta;
 	name: string;
@@ -97,9 +88,13 @@ const extendedQuerys = [
 		name: "perPage",
 		value: "perPage",
 	},
+	{
+		name: "alive",
+		value: "alive",
+	},
 ] as const;
 
 type QueryTypeValues = (typeof extendedQuerys)[number]["value"];
 export type QueyParams = Partial<{
-	[K in QueryTypeValues]: string | string[] | number;
+	[K in QueryTypeValues]: string | string[] | number | boolean;
 }>;

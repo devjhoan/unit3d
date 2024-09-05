@@ -1,9 +1,8 @@
 import { checkbox, confirm, input, select, Separator } from "@inquirer/prompts";
-import { freeleech, queryTypes, resolutions } from "./lib/constants";
 import { calculateDownloadTime } from "@/lib/calculateDownloadTime";
 import { formatFileSize, parseTorrentName } from "@/lib/parser";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { hasValidLanguage } from "./lib/hasValdLanguage";
+import { hasValidLanguage } from "@/lib/hasValdLanguage";
 import { TorrentClient } from "@/modules/TorrentClient";
 import { Unit3d } from "@/modules/Unit3d";
 import { Emby } from "@/modules/Emby";
@@ -16,8 +15,15 @@ import {
 	type QueyParams,
 	TrackerCategory,
 	StringCategory,
-	TrackerTypes,
 } from "@/types/unit3d";
+
+import {
+	booleanFilters,
+	freeleech,
+	queryTypes,
+	resolutions,
+	trackerTypes,
+} from "@/lib/constants";
 
 class TorrentManager {
 	private torrentClients: Array<TorrentClient>;
@@ -141,8 +147,10 @@ class TorrentManager {
 	public async run() {
 		await this.validateConfig();
 
-		let queries: QueyParams = {};
 		let addMoreQueries = true;
+		let queries: QueyParams = {
+			alive: true,
+		};
 
 		while (addMoreQueries) {
 			const response = await this.promptQueryType();
@@ -167,9 +175,16 @@ class TorrentManager {
 		const timeStart = performance.now();
 		const spinner = ora("Buscando torrents...").start();
 
-		let search: Array<ContentItem> = [];
+		let search: {
+			torrents: Array<ContentItem>;
+			filteredTorrents: number;
+		} = { torrents: [], filteredTorrents: 0 };
 
-		if (queries.maxTorrents) {
+		const maxTorrents = Number.isNaN(Number(queries.maxTorrents))
+			? 100
+			: Number(queries.maxTorrents);
+
+		if (queries.maxTorrents === 0) {
 			search = await this.api.searchAll(
 				{
 					...queries,
@@ -180,49 +195,61 @@ class TorrentManager {
 		} else {
 			search = await this.api.search({
 				...queries,
-				perPage: 100,
+				perPage: maxTorrents,
 			});
 		}
 
-		const size = search.reduce((acc, curr) => acc + curr.attributes.size, 0);
+		const size = search.torrents.reduce(
+			(acc, curr) => acc + curr.attributes.size,
+			0,
+		);
+
 		const takeTime = Math.floor(performance.now() - timeStart);
 		const indicator = takeTime < 1000 ? "ms" : "s";
+		const time = `${takeTime > 1000 ? (takeTime / 1000).toFixed(2) : takeTime} ${indicator}`;
 
 		spinner.succeed(
-			`Se encontraron ${search.length} (${formatFileSize(size)}) torrents en ${takeTime > 1000 ? (takeTime / 1000).toFixed(2) : takeTime} ${indicator}`,
+			`Se encontraron ${search.torrents.length} (${formatFileSize(size)}) torrents en ${time} (${search.filteredTorrents} torrents filtrados)`,
 		);
 		spinner.stop();
 
-		if (search.length === 0) {
+		if (search.torrents.length === 0) {
 			console.error("No se encontraron torrents en la búsqueda");
 			process.exit(1);
 		}
 
-		const categoryFilter = await this.promptCategories(search);
+		const categoryFilter = await this.promptCategories(search.torrents);
 		if (!categoryFilter) {
 			console.error("No se seleccionaron categorías");
 			process.exit(1);
 		}
 
-		const responseTorrents = await this.promptTorrents(search, categoryFilter);
+		const responseTorrents = await this.promptTorrents(
+			search.torrents,
+			categoryFilter,
+		);
 		if (!responseTorrents) {
 			console.error("No se seleccionaron torrents");
 			process.exit(1);
 		}
 
 		if (config.GeneralSettings.DownloadTorrentsToFolder) {
-			await this.downloadTorrentsToFolder(responseTorrents, search);
+			await this.downloadTorrentsToFolder(responseTorrents, search.torrents);
 		} else {
 			const torrentClient = await this.promptTorrentClient(
 				responseTorrents,
-				search,
+				search.torrents,
 			);
 			if (torrentClient === undefined) {
 				console.error("No se seleccionó un cliente de torrent");
 				process.exit(1);
 			}
 
-			await this.downloadTorrents(responseTorrents, search, torrentClient);
+			await this.downloadTorrents(
+				responseTorrents,
+				search.torrents,
+				torrentClient,
+			);
 		}
 
 		const repeat = await confirm({
@@ -238,7 +265,7 @@ class TorrentManager {
 
 	private async promptQueryType(): Promise<Record<
 		string,
-		string | Array<string>
+		string | Array<string> | boolean
 	> | null> {
 		const response = await select({
 			message: "Selecciona el tipo de consulta",
@@ -279,14 +306,9 @@ class TorrentManager {
 		if (response === "types") {
 			const types = await select({
 				message: "Selecciona el tipo de torrent",
+				choices: trackerTypes,
 				loop: false,
 				pageSize: 15,
-				choices: Object.entries(TrackerTypes)
-					.filter(([_, value]) => typeof value === "string")
-					.map(([value, name]) => ({
-						name: `${name}`,
-						value: `${value}`,
-					})),
 			});
 
 			return { types: [types] };
@@ -360,6 +382,17 @@ class TorrentManager {
 			});
 
 			return { maxTorrents: maxTorrents };
+		}
+
+		if (response === "filters") {
+			const filters = await checkbox({
+				message: "Selecciona los filtros booleanos",
+				choices: booleanFilters,
+				loop: false,
+				pageSize: 15,
+			});
+
+			return Object.fromEntries(filters.map((filter) => [filter, true]));
 		}
 
 		const queryResolve = await input({
@@ -546,6 +579,13 @@ class TorrentManager {
 					value: torrent.id,
 				})),
 			);
+		}
+
+		if (choices.length === 0) {
+			console.error(
+				"No se encontraron torrents, esto puede ser debido a que no se encontraron torrents vivos (con seeders) o que los torrents fueron filtrados por tags.",
+			);
+			process.exit(1);
 		}
 
 		return await checkbox({

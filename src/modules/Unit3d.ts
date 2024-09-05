@@ -34,7 +34,7 @@ export class Unit3d {
 		});
 
 		const torrents = response?.data;
-		return torrents
+		const filteredTorrents = torrents
 			.filter((torrent) => torrent.attributes.seeders > 0)
 			.filter((torrent) =>
 				config.GeneralSettings.FilterTags.some(
@@ -42,6 +42,11 @@ export class Unit3d {
 						!torrent.attributes.name.toLowerCase().includes(tag.toLowerCase()),
 				),
 			);
+
+		return {
+			torrents: filteredTorrents,
+			filteredTorrents: torrents.length - filteredTorrents.length,
+		};
 	}
 
 	async searchAll(queryParams: QueyParams, spinner: Ora) {
@@ -55,6 +60,7 @@ export class Unit3d {
 				params: {
 					...queryParams,
 					cursor: nextCursor,
+					perPage: 100,
 				},
 			});
 
@@ -65,18 +71,7 @@ export class Unit3d {
 					nextCursor = response.meta.next_cursor;
 				}
 
-				const filteredTorrents = response.data
-					.filter((torrent) => torrent.attributes.seeders > 0)
-					.filter((torrent) =>
-						config.GeneralSettings.FilterTags.some(
-							(tag) =>
-								!torrent.attributes.name
-									.toLowerCase()
-									.includes(tag.toLowerCase()),
-						),
-					);
-
-				torrents.push(...filteredTorrents);
+				torrents.push(...response.data);
 				spinner.text = `Buscando torrents... (${torrents.length})`;
 			} catch (error) {
 				console.error(error);
@@ -85,7 +80,19 @@ export class Unit3d {
 			}
 		}
 
-		return torrents;
+		const filteredTorrents = torrents
+			.filter((torrent) => torrent.attributes.seeders > 0)
+			.filter((torrent) =>
+				config.GeneralSettings.FilterTags.some(
+					(tag) =>
+						!torrent.attributes.name.toLowerCase().includes(tag.toLowerCase()),
+				),
+			);
+
+		return {
+			torrents: filteredTorrents,
+			filteredTorrents: torrents.length - filteredTorrents.length,
+		};
 	}
 
 	private async get<T>({
