@@ -191,6 +191,7 @@ class TorrentManager {
 		spinner.succeed(
 			`Se encontraron ${search.length} (${formatFileSize(size)}) torrents en ${takeTime > 1000 ? (takeTime / 1000).toFixed(2) : takeTime} ${indicator}`,
 		);
+		spinner.stop();
 
 		if (search.length === 0) {
 			console.error("No se encontraron torrents en la búsqueda");
