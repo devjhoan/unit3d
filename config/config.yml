@@ -1,60 +1,50 @@
 GeneralSettings:
   # Url del tracker donde se descargarán los torrents
-  ApiUrl: "https://lat-team.com"
+  ApiUrl: "https://tracker.com"
   # Tu user api key (https://tracker.com/users/YOUR_USERNAME/apikeys)
-  ApiKey: "FxGgMGciu4vUFDyw74UpxywVUHAfAQiy9mM512Yq3RtaCh3Qg85h8OyIpObQ8YztareUN7ebgROdwLX3OKhGz3v7p34Tmk9L7puh"
+  ApiKey: "Tu-Api-Key-Aqui"
   # Los Tags que definas en el filtro serán ignorados en la búsqueda
   FilterTags: ["SUBS"]
-  # Mostrar torrents ya descargados? (debe estar configurado EmbySettings.Enabled)
-  ShowDownloadedTorrents: false
   # Descargar archivo .torrent directamente a una carpeta en lugar de usar un cliente de torrent
   DownloadTorrentsToFolder: false
-  # Directorio donde se descargarán los torrents (solo se usará si DownloadTorrentsToFolder es true)
+  # (solo se usará si DownloadTorrentsToFolder es true) Directorio donde se descargarán los torrents
   TorrentsFolder: "torrents"
 
 FolderSettings:
   # Directorio donde se descargarán las películas
-  Movies: "/data-4/movies"
+  Movies: "/downloads/movies"
   # Directorio donde se descargarán las series
   # Las series se descargarán en subdirectorios por cada serie y/o temporada, ejemplo:
   # series/Breaking Bad (2008)/Season 01/ -> Se descargará en una carpeta Season solamente si es un single episode
   # series/Breaking Bad (2008)/ -> Se descargará directamente en la carpeta de la serie si es un season pack
-  TV: "/data-4/series"
+  TV: "/downloads/series"
   # Categorias personalizadas (key es tomado desde unit3d, value es la carpeta donde se descargará)
   # [key] = "value"
-  E-Books: "/data-4/ebooks"
+  E-Books: "/downloads/ebooks"
 
 TmdbSettings:
   # Url de la api de tmdb (no modificar)
   ApiUrl: "https://api.themoviedb.org/3"
   # Tu api key de tmdb (https://www.themoviedb.org/settings/api)
-  ApiKey: "1b3acd363e264d1b5c99258a4fe16d9c"
+  ApiKey: "Tu-Api-Key-Aqui"
 
 # Emby es usado para saber si una serie o película ya está descargada en tu librería
 EmbySettings:
   # Activa o desactiva el uso de Emby
-  Enabled: true
+  Enabled: false
   # Url donde se encuentra tu servidor Emby
   ApiUrl: "http://emby.server.local"
   # Tu api key de Emby (http://emby.local/web/index.html#!/apikeys)
-  ApiKey: "fbfb7fd68e744dd3b1300f27f3879cf4"
+  ApiKey: "fbfb7ed68e753dd3b1300f27f3972cf4"
   # Un usuario de Emby con acceso a todas las bibliotecas
   Username: "jhoan.me"
 
 TorrentClients:
   # Configuración de cada cliente de torrent
-  - Url: "http://pterodactyl.server.local"
-    DisplayName: "Pterodactyl"
-    Username: "admin"
-    Password: "Jhoan2020.*"
-  - Url: "http://strider.server.local"
-    DisplayName: "Strider"
-    Username: "admin"
-    Password: "Jhoan2020.*"
-  - Url: "http://192.168.1.20:8083"
+  - Url: "http://192.168.1.20:8080"
     DisplayName: "Home"
     Username: "admin"
-    Password: "Jhoan2020.*"
+    Password: "Contraseña1234"
 
 # No modificar esta línea (se usa para actualizar la configuración)
 Version: 1.0.1
