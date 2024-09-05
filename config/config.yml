@@ -5,6 +5,8 @@ GeneralSettings:
   ApiKey: "Tu-Api-Key-Aqui"
   # Los Tags que definas en el filtro serán ignorados en la búsqueda
   FilterTags: ["SUBS"]
+  # Mostrar torrents ya descargados? (debe estar configurado EmbySettings.Enabled)
+  ShowDownloadedTorrents: false
   # Descargar archivo .torrent directamente a una carpeta en lugar de usar un cliente de torrent
   DownloadTorrentsToFolder: false
   # (solo se usará si DownloadTorrentsToFolder es true) Directorio donde se descargarán los torrents
