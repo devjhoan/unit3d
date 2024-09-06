@@ -497,11 +497,13 @@ class TorrentManager {
 				).sort((a, b) => parseInt(a) - parseInt(b));
 
 				for (const season of seasons) {
+					const seasonExists = embySeasons.includes(Number(season));
+
 					choices.push(
 						new Separator(
 							this.color(
-								` » Season ${season} ${alreadyExists && "(Ya existe)"}`,
-								alreadyExists ? "green" : "blue",
+								` » Season ${season} ${seasonExists ? "(Ya existe)" : ""}`,
+								seasonExists ? "green" : "blue",
 							),
 						),
 					);
