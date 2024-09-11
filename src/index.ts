@@ -184,7 +184,7 @@ class TorrentManager {
 			? 100
 			: Number(queries.maxTorrents);
 
-		if (queries.maxTorrents === 0) {
+		if (queries.maxTorrents === "0") {
 			search = await this.api.searchAll(
 				{
 					...queries,
