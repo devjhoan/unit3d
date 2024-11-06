@@ -34,14 +34,7 @@ export class Unit3d {
 		});
 
 		const torrents = response?.data;
-		const filteredTorrents = torrents
-			.filter((torrent) => torrent.attributes.seeders > 0)
-			.filter((torrent) =>
-				config.GeneralSettings.FilterTags.some(
-					(tag) =>
-						!torrent.attributes.name.toLowerCase().includes(tag.toLowerCase()),
-				),
-			);
+		const filteredTorrents = this.filterTorrents(torrents);
 
 		return {
 			torrents: filteredTorrents,
@@ -80,14 +73,7 @@ export class Unit3d {
 			}
 		}
 
-		const filteredTorrents = torrents
-			.filter((torrent) => torrent.attributes.seeders > 0)
-			.filter((torrent) =>
-				config.GeneralSettings.FilterTags.some(
-					(tag) =>
-						!torrent.attributes.name.toLowerCase().includes(tag.toLowerCase()),
-				),
-			);
+		const filteredTorrents = this.filterTorrents(torrents);
 
 		return {
 			torrents: filteredTorrents,
@@ -108,6 +94,21 @@ export class Unit3d {
 		});
 
 		return response.json();
+	}
+
+	private filterTorrents(torrents: Array<ContentItem>) {
+		return torrents
+			.filter((torrent) => torrent.attributes.seeders > 0)
+			.filter((torrent) =>
+				config.GeneralSettings.FilterTags.length > 0
+					? config.GeneralSettings.FilterTags.some(
+							(tag) =>
+								!torrent.attributes.name
+									.toLowerCase()
+									.includes(tag.toLowerCase()),
+						)
+					: true,
+			);
 	}
 }
 
