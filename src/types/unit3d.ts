@@ -19,6 +19,7 @@ export interface ContentItem {
 export enum TrackerCategory {
 	Peliculas = 1,
 	Series = 2,
+	Musica = 3,
 	Anime = 5,
 	Doramas = 20,
 	Telenovelas = 8,
@@ -27,6 +28,7 @@ export enum TrackerCategory {
 
 export enum StringCategory {
 	Peliculas = "Peliculas",
+	Musica = "Musica",
 	Series = "TV Series",
 	Anime = "Anime",
 	Doramas = "Doramas & Turcas",
@@ -92,9 +94,16 @@ const extendedQuerys = [
 		name: "alive",
 		value: "alive",
 	},
+	{
+		name: "send",
+		value: "send",
+	},
 ] as const;
 
-type QueryTypeValues = (typeof extendedQuerys)[number]["value"];
-export type QueyParams = Partial<{
+// Adjusted type to infer the literal types of the "value" property in each item
+export type QueryTypeValues = (typeof extendedQuerys)[number]["value"];
+
+// Define QueryParams using QueryTypeValues
+export type QueryParams = Partial<{
 	[K in QueryTypeValues]: string | string[] | number | boolean;
 }>;
