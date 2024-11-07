@@ -21,7 +21,7 @@ export const queryTypes = [
 		name: "Nombre del Archivo",
 		value: "file_name",
 	},
-];
+] as const;
 
 export const resolutions = [
 	{ name: "2160p (4K)", value: "2" },
