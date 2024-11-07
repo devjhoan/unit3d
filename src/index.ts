@@ -4,6 +4,7 @@ import { formatFileSize, parseTorrentName } from "@/lib/parser";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { hasValidLanguage } from "@/lib/hasValdLanguage";
 import { TorrentClient } from "@/modules/TorrentClient";
+import { parseCLIArgs } from "./lib/cliArgs";
 import { Unit3d } from "@/modules/Unit3d";
 import { Emby } from "@/modules/Emby";
 import { config } from "@/lib/config";
@@ -12,7 +13,7 @@ import ora from "ora";
 
 import {
 	type ContentItem,
-	type QueyParams,
+	type QueryParams,
 	TrackerCategory,
 	StringCategory,
 } from "@/types/unit3d";
@@ -146,13 +147,15 @@ class TorrentManager {
 
 	public async run() {
 		await this.validateConfig();
+		const cliArgs = parseCLIArgs(config.Version);
 
 		let addMoreQueries = true;
-		let queries: QueyParams = {
+		let queries: QueryParams = {
 			alive: true,
+			...cliArgs,
 		};
 
-		while (addMoreQueries) {
+		while (!cliArgs.send && addMoreQueries) {
 			const response = await this.promptQueryType();
 			if (!response) {
 				console.error("No se proporcionó ninguna consulta de búsqueda");
@@ -184,7 +187,7 @@ class TorrentManager {
 			? 100
 			: Number(queries.maxTorrents);
 
-		if (queries.maxTorrents === "0") {
+		if (queries.maxTorrents === "0" || queries.maxTorrents === 0) {
 			search = await this.api.searchAll(
 				{
 					...queries,
