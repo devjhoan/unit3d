@@ -41,16 +41,6 @@ EmbySettings:
   # Un usuario de Emby con acceso a todas las bibliotecas
   Username: "jhoan.me"
 
-# Esta configuración es usada para validar si ya tienes descargado un torrent antes de agregarlo a la lista de descargas
-# Es casi lo mismo que EmbySettings, pero acá validamos usando el cliente de torrent
-ValidateUsingTorrent:
-  # Activa o desactiva la validación usando torrent
-  Enabled: false
-  # Cliente torrent que se usará para validar los torrents (debe estar configurado en TorrentClients)
-  TorrentClient: "Home"
-  # Categorías que quieras validar usando el cliente torrent
-  Categories: ["All"]
-
 TorrentClients:
   # Configuración de cada cliente de torrent
   - Url: "http://192.168.1.20:8080"
