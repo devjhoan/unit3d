@@ -4,7 +4,7 @@ import type { Ora } from "ora";
 import type {
 	Unit3dSearchResult,
 	ContentItem,
-	QueyParams,
+	QueryParams,
 } from "@/types/unit3d";
 
 interface Unit3dOptions {
@@ -21,7 +21,7 @@ export class Unit3d {
 		this.apiKey = apiKey;
 	}
 
-	async search(queryParams: QueyParams) {
+	async search(queryParams: QueryParams) {
 		const response = await this.get<Unit3dSearchResult<ContentItem>>({
 			url: "torrents/filter",
 			params: {
@@ -42,8 +42,9 @@ export class Unit3d {
 		};
 	}
 
-	async searchAll(queryParams: QueyParams, spinner: Ora) {
+	async searchAll(queryParams: QueryParams, spinner: Ora) {
 		const torrents: Array<ContentItem> = [];
+		const filteredTorrents: Array<ContentItem> = [];
 		let completed = false;
 		let nextCursor = "";
 
@@ -65,15 +66,15 @@ export class Unit3d {
 				}
 
 				torrents.push(...response.data);
-				spinner.text = `Buscando torrents... (${torrents.length})`;
+				filteredTorrents.push(...this.filterTorrents(response.data));
+
+				spinner.text = `Buscando torrents... (${filteredTorrents.length})`;
 			} catch (error) {
 				console.error(error);
 				console.error(response);
 				spinner.fail("Error al buscar torrents");
 			}
 		}
-
-		const filteredTorrents = this.filterTorrents(torrents);
 
 		return {
 			torrents: filteredTorrents,
