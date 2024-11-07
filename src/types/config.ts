@@ -38,4 +38,5 @@ export interface Config {
 	TorrentClients: Array<TorrentClient>;
 	TmdbSettings: TmdbSettings;
 	EmbySettings: EmbySettings;
+	Version: string;
 }

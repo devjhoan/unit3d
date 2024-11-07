@@ -59,4 +59,4 @@ TorrentClients:
     Password: "Contraseña1234"
 
 # No modificar esta línea (se usa para actualizar la configuración)
-Version: 1.0.1
+Version: 1.0.2
